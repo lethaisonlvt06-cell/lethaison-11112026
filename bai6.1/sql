@@ -1,0 +1,56 @@
+CREATE DATABASE SalesDB;
+GO
+USE SalesDB;
+GO
+
+CREATE TABLE NhanVien(
+    MaNV INT IDENTITY PRIMARY KEY,
+    TenNV NVARCHAR(100) NOT NULL,
+    SoDienThoai VARCHAR(15) UNIQUE,
+    ChucVu NVARCHAR(50)
+);
+
+CREATE TABLE KhachHang(
+    MaKH INT IDENTITY PRIMARY KEY,
+    TenKH NVARCHAR(100) NOT NULL,
+    DienThoai VARCHAR(15) UNIQUE,
+    DiemTichLuy INT DEFAULT 0
+);
+
+CREATE TABLE SanPham(
+    MaSP VARCHAR(20) PRIMARY KEY,
+    TenSP NVARCHAR(150) NOT NULL,
+    GiaBan DECIMAL(18,2) CHECK(GiaBan > 0),
+    SoLuongTon INT CHECK(SoLuongTon >= 0)
+);
+
+CREATE TABLE HoaDon(
+    MaHD INT IDENTITY PRIMARY KEY,
+    NgayLap DATETIME DEFAULT GETDATE(),
+    MaNV INT NOT NULL REFERENCES NhanVien(MaNV),
+    MaKH INT NULL REFERENCES KhachHang(MaKH),
+    TongTien DECIMAL(18,2)
+);
+
+CREATE TABLE ChiTietHoaDon(
+    MaHD INT REFERENCES HoaDon(MaHD),
+    MaSP VARCHAR(20) REFERENCES SanPham(MaSP),
+    SoLuong INT CHECK(SoLuong > 0),
+    DonGia DECIMAL(18,2),
+    PRIMARY KEY(MaHD,MaSP)
+);
+
+INSERT INTO NhanVien VALUES
+(N'Nguyễn Văn A','0901111111',N'Thu ngân'),
+(N'Trần Văn B','0902222222',N'Quản lý');
+
+INSERT INTO KhachHang(TenKH,DienThoai)
+VALUES(N'Khách hàng 1','0911111111'),
+      (N'Khách hàng 2','0922222222');
+
+INSERT INTO SanPham VALUES
+('SP01',N'Mì tôm',5000,100),
+('SP02',N'Sữa tươi',12000,50),
+('SP03',N'Nước ngọt',10000,80),
+('SP04',N'Bánh mì',15000,40);
+GO
