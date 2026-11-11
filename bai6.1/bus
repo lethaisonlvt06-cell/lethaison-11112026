@@ -1,0 +1,29 @@
+using System.Data;
+using RetailSales.DAL;
+using RetailSales.DTO;
+
+namespace RetailSales.BUS
+{
+    public class SanPhamBUS
+    {
+        SanPhamDAL dal = new SanPhamDAL();
+
+        public DataTable GetAll() => dal.GetAll();
+
+        public DataTable Search(string q) => dal.Search(q);
+
+        public void Insert(SanPhamDTO sp)
+        {
+            if (string.IsNullOrWhiteSpace(sp.MaSP) ||
+                string.IsNullOrWhiteSpace(sp.TenSP) ||
+                sp.GiaBan <= 0 || sp.SoLuongTon < 0)
+                throw new System.Exception("Thông tin sản phẩm không hợp lệ!");
+
+            dal.Insert(sp);
+        }
+
+        public void Update(SanPhamDTO sp) => dal.Update(sp);
+
+        public void Delete(string ma) => dal.Delete(ma);
+    }
+}
