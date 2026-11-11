@@ -1,0 +1,98 @@
+using System;
+using System.Data;
+using System.Data.SqlClient;
+
+namespace HRM.DAL
+{
+    public class ChamCongDAL
+    {
+        private SqlDataAdapter TaoAdapter(string thangNam)
+        {
+            SqlConnection c = DB.GetConnection();
+
+            SqlDataAdapter da = new SqlDataAdapter(
+                @"SELECT MaCong,MaNV,ThangNam,SoNgayCong,SoGioOT,DaChotLuong
+                  FROM BangChamCong
+                  WHERE ThangNam=@thang", c);
+
+            da.SelectCommand.Parameters.Add("@thang", SqlDbType.VarChar, 7)
+                .Value = thangNam;
+
+            return da;
+        }
+
+        public DataTable LoadChamCong(string thangNam)
+        {
+            using (SqlConnection c = DB.GetConnection())
+            {
+                SqlDataAdapter da = new SqlDataAdapter(@"
+                    SELECT nv.MaNV,nv.HoTen,
+                    cc.MaCong,cc.ThangNam,
+                    ISNULL(cc.SoNgayCong,0) AS SoNgayCong,
+                    ISNULL(cc.SoGioOT,0) AS SoGioOT,
+                    ISNULL(cc.DaChotLuong,0) AS DaChotLuong
+                    FROM NhanVien nv
+                    LEFT JOIN BangChamCong cc
+                    ON nv.MaNV=cc.MaNV AND cc.ThangNam=@thang", c);
+
+                da.SelectCommand.Parameters.Add("@thang", SqlDbType.VarChar, 7)
+                    .Value = thangNam;
+
+                DataTable dt = new DataTable();
+                da.Fill(dt);
+                return dt;
+            }
+        }
+
+        public void LuuChamCong(DataTable dt, string thangNam)
+        {
+            using (SqlConnection c = DB.GetConnection())
+            {
+                c.Open();
+
+                // Lấy dữ liệu bảng chấm công có thể cập nhật
+                SqlDataAdapter da = new SqlDataAdapter(
+                    @"SELECT MaCong,MaNV,ThangNam,SoNgayCong,SoGioOT,DaChotLuong
+                      FROM BangChamCong WHERE ThangNam=@thang", c);
+
+                da.SelectCommand.Parameters.Add("@thang", SqlDbType.VarChar, 7)
+                    .Value = thangNam;
+
+                SqlCommandBuilder builder = new SqlCommandBuilder(da);
+
+                DataTable bang = new DataTable();
+                da.Fill(bang);
+
+                foreach (DataRow r in dt.Rows)
+                {
+                    int maNV = Convert.ToInt32(r["MaNV"]);
+
+                    if (r["MaCong"] == DBNull.Value)
+                    {
+                        DataRow moi = bang.NewRow();
+                        moi["MaNV"] = maNV;
+                        moi["ThangNam"] = thangNam;
+                        moi["SoNgayCong"] = Convert.ToDouble(r["SoNgayCong"]);
+                        moi["SoGioOT"] = Convert.ToDouble(r["SoGioOT"]);
+                        moi["DaChotLuong"] = false;
+                        bang.Rows.Add(moi);
+                    }
+                    else
+                    {
+                        DataRow cu = bang.Rows.Find(Convert.ToInt32(r["MaCong"]));
+                        if (cu != null && !Convert.ToBoolean(cu["DaChotLuong"]))
+                        {
+                            cu["SoNgayCong"] = Convert.ToDouble(r["SoNgayCong"]);
+                            cu["SoGioOT"] = Convert.ToDouble(r["SoGioOT"]);
+                        }
+                    }
+                }
+
+                // CommandBuilder cần khóa chính để nhận diện bản ghi
+                bang.PrimaryKey = new DataColumn[] { bang.Columns["MaCong"] };
+
+                da.Update(bang);
+            }
+        }
+    }
+}
