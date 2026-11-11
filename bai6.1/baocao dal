@@ -1,0 +1,60 @@
+using System;
+using System.Data;
+using System.Data.SqlClient;
+
+namespace RetailSales.DAL
+{
+    public class BaoCaoDAL
+    {
+        public decimal DoanhThuNgay(DateTime ngay)
+        {
+            using (SqlConnection c = DB.GetConnection())
+            using (SqlCommand cmd = new SqlCommand(
+                @"SELECT ISNULL(SUM(TongTien),0)
+                  FROM HoaDon
+                  WHERE CAST(NgayLap AS DATE)=@ngay", c))
+            {
+                cmd.Parameters.Add("@ngay", SqlDbType.Date).Value = ngay.Date;
+                c.Open();
+                return Convert.ToDecimal(cmd.ExecuteScalar());
+            }
+        }
+
+        public decimal DoanhThuThang(int thang, int nam)
+        {
+            using (SqlConnection c = DB.GetConnection())
+            using (SqlCommand cmd = new SqlCommand(
+                @"SELECT ISNULL(SUM(TongTien),0)
+                  FROM HoaDon
+                  WHERE MONTH(NgayLap)=@thang
+                  AND YEAR(NgayLap)=@nam", c))
+            {
+                cmd.Parameters.Add("@thang", SqlDbType.Int).Value = thang;
+                cmd.Parameters.Add("@nam", SqlDbType.Int).Value = nam;
+                c.Open();
+                return Convert.ToDecimal(cmd.ExecuteScalar());
+            }
+        }
+
+        public DataTable Top5()
+        {
+            using (SqlConnection c = DB.GetConnection())
+            using (SqlCommand cmd = new SqlCommand(
+                @"SELECT TOP 5 s.MaSP,s.TenSP,
+                  SUM(ct.SoLuong) AS TongSoLuong
+                  FROM ChiTietHoaDon ct
+                  JOIN SanPham s ON ct.MaSP=s.MaSP
+                  GROUP BY s.MaSP,s.TenSP
+                  ORDER BY TongSoLuong DESC", c))
+            {
+                c.Open();
+                DataTable dt = new DataTable();
+
+                using (SqlDataReader rd = cmd.ExecuteReader())
+                    dt.Load(rd);
+
+                return dt;
+            }
+        }
+    }
+}
