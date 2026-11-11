@@ -1,0 +1,50 @@
+CREATE DATABASE HRMDB;
+GO
+USE HRMDB;
+GO
+
+CREATE TABLE PhongBan(
+    MaPB INT IDENTITY PRIMARY KEY,
+    TenPB NVARCHAR(100) NOT NULL,
+    Mota NVARCHAR(255)
+);
+
+CREATE TABLE NhanVien(
+    MaNV INT IDENTITY PRIMARY KEY,
+    HoTen NVARCHAR(100) NOT NULL,
+    NgaySinh DATETIME,
+    CCCD VARCHAR(20) UNIQUE,
+    MaPB INT REFERENCES PhongBan(MaPB),
+    LuongCoBan DECIMAL(18,2) CHECK(LuongCoBan > 0),
+    HeSoLuong FLOAT DEFAULT 1.0
+);
+
+CREATE TABLE BangChamCong(
+    MaCong INT IDENTITY PRIMARY KEY,
+    MaNV INT NOT NULL REFERENCES NhanVien(MaNV),
+    ThangNam VARCHAR(7) NOT NULL,
+    SoNgayCong FLOAT NOT NULL CHECK(SoNgayCong >= 0 AND SoNgayCong <= 31),
+    SoGioOT FLOAT DEFAULT 0 CHECK(SoGioOT >= 0),
+    DaChotLuong BIT NOT NULL DEFAULT 0,
+    CONSTRAINT UQ_ChamCong UNIQUE(MaNV,ThangNam)
+);
+
+CREATE TABLE BangLuong(
+    MaLuong INT IDENTITY PRIMARY KEY,
+    MaNV INT NOT NULL REFERENCES NhanVien(MaNV),
+    ThangNam VARCHAR(7) NOT NULL,
+    ThucLinh DECIMAL(18,2) NOT NULL,
+    CONSTRAINT UQ_BangLuong UNIQUE(MaNV,ThangNam)
+);
+
+INSERT INTO PhongBan(TenPB,Mota)
+VALUES(N'Kế toán',N'Phòng kế toán'),
+      (N'Kinh doanh',N'Phòng kinh doanh'),
+      (N'Kỹ thuật',N'Phòng kỹ thuật');
+
+INSERT INTO NhanVien(HoTen,NgaySinh,CCCD,MaPB,LuongCoBan,HeSoLuong)
+VALUES
+(N'Nguyễn Văn A','2000-01-01','001001000001',1,8000000,1.5),
+(N'Trần Văn B','2001-02-02','001001000002',2,7500000,1.3),
+(N'Lê Văn C','2002-03-03','001001000003',3,9000000,1.7);
+GO
