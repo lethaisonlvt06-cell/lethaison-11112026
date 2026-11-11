@@ -1,0 +1,286 @@
+using System;
+using System.Data;
+using System.Windows.Forms;
+using HRM.BUS;
+using HRM.DAL;
+using HRM.DTO;
+
+namespace HRM.GUI
+{
+    public class FormNhanSu : Form
+    {
+        NhanVienBUS nvBUS = new NhanVienBUS();
+        ChamCongBUS ccBUS = new ChamCongBUS();
+        TinhLuongBUS luongBUS = new TinhLuongBUS();
+        BangLuongDAL luongDAL = new BangLuongDAL();
+
+        DataGridView dgvNV = new DataGridView();
+        DataGridView dgvCC = new DataGridView();
+        DataGridView dgvLuong = new DataGridView();
+
+        TextBox txtMa = new TextBox();
+        TextBox txtTen = new TextBox();
+        TextBox txtCCCD = new TextBox();
+        TextBox txtMaPB = new TextBox();
+        TextBox txtLuong = new TextBox();
+        TextBox txtHeSo = new TextBox();
+        TextBox txtTim = new TextBox();
+        TextBox txtThang = new TextBox();
+
+        public FormNhanSu()
+        {
+            Text = "HỆ THỐNG QUẢN LÝ NHÂN SỰ VÀ TÍNH LƯƠNG";
+            Width = 1100;
+            Height = 700;
+            StartPosition = FormStartPosition.CenterScreen;
+
+            TaoGiaoDien();
+            LoadNhanVien();
+        }
+
+        void TaoGiaoDien()
+        {
+            TabControl tab = new TabControl();
+            tab.Dock = DockStyle.Fill;
+
+            TabPage p1 = new TabPage("Nhân viên");
+            TabPage p2 = new TabPage("Chấm công");
+            TabPage p3 = new TabPage("Bảng lương");
+
+            tab.TabPages.Add(p1);
+            tab.TabPages.Add(p2);
+            tab.TabPages.Add(p3);
+
+            Controls.Add(tab);
+
+            // TAB NHÂN VIÊN
+            ThemLabel(p1, "Mã NV", 20, 20);
+            txtMa.SetBounds(120, 20, 150, 25);
+            txtMa.ReadOnly = true;
+            p1.Controls.Add(txtMa);
+
+            ThemLabel(p1, "Họ tên", 20, 60);
+            txtTen.SetBounds(120, 60, 150, 25);
+            p1.Controls.Add(txtTen);
+
+            ThemLabel(p1, "CCCD", 300, 20);
+            txtCCCD.SetBounds(400, 20, 150, 25);
+            p1.Controls.Add(txtCCCD);
+
+            ThemLabel(p1, "Mã phòng", 300, 60);
+            txtMaPB.SetBounds(400, 60, 150, 25);
+            p1.Controls.Add(txtMaPB);
+
+            ThemLabel(p1, "Lương CB", 580, 20);
+            txtLuong.SetBounds(680, 20, 150, 25);
+            p1.Controls.Add(txtLuong);
+
+            ThemLabel(p1, "Hệ số", 580, 60);
+            txtHeSo.SetBounds(680, 60, 150, 25);
+            p1.Controls.Add(txtHeSo);
+
+            ThemLabel(p1, "Tìm kiếm", 20, 105);
+            txtTim.SetBounds(120, 105, 200, 25);
+            p1.Controls.Add(txtTim);
+
+            TaoNut(p1, "Tìm", 330, 105, TimNV);
+            TaoNut(p1, "Thêm", 440, 105, ThemNV);
+            TaoNut(p1, "Sửa", 550, 105, SuaNV);
+            TaoNut(p1, "Xóa", 660, 105, XoaNV);
+
+            dgvNV.SetBounds(20, 155, 1020, 450);
+            dgvNV.ReadOnly = true;
+            dgvNV.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            dgvNV.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            dgvNV.CellClick += ChonNV;
+            p1.Controls.Add(dgvNV);
+
+            // TAB CHẤM CÔNG
+            ThemLabel(p2, "Tháng/Năm (MM/YYYY)", 20, 20);
+            txtThang.Text = DateTime.Now.ToString("MM/yyyy");
+            txtThang.SetBounds(180, 20, 120, 25);
+            p2.Controls.Add(txtThang);
+
+            TaoNut(p2, "Tải chấm công", 330, 18, TaiChamCong);
+            TaoNut(p2, "Lưu chấm công", 450, 18, LuuChamCong);
+            TaoNut(p2, "Chốt lương tháng", 580, 18, ChotLuong);
+
+            dgvCC.SetBounds(20, 65, 1020, 540);
+            dgvCC.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            dgvCC.AllowUserToAddRows = false;
+            p2.Controls.Add(dgvCC);
+
+            // TAB BẢNG LƯƠNG
+            ThemLabel(p3, "Tháng/Năm", 20, 20);
+            TextBox txtThangLuong = new TextBox();
+            txtThangLuong.Name = "txtThangLuong";
+            txtThangLuong.Text = DateTime.Now.ToString("MM/yyyy");
+            txtThangLuong.SetBounds(120, 20, 120, 25);
+            p3.Controls.Add(txtThangLuong);
+
+            TaoNut(p3, "Xem bảng lương", 270, 18, () =>
+            {
+                try
+                {
+                    dgvLuong.DataSource = luongDAL.GetBangLuong(txtThangLuong.Text.Trim());
+                }
+                catch (Exception ex) { MessageBox.Show(ex.Message); }
+            });
+
+            dgvLuong.SetBounds(20, 65, 1020, 540);
+            dgvLuong.ReadOnly = true;
+            dgvLuong.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            p3.Controls.Add(dgvLuong);
+        }
+
+        void ThemLabel(Control p, string text, int x, int y)
+        {
+            p.Controls.Add(new Label
+            {
+                Text = text,
+                Left = x,
+                Top = y + 4,
+                AutoSize = true
+            });
+        }
+
+        void TaoNut(Control p, string text, int x, int y, Action action)
+        {
+            Button b = new Button();
+            b.Text = text;
+            b.SetBounds(x, y, 110, 30);
+            b.Click += (s, e) => action();
+            p.Controls.Add(b);
+        }
+
+        void LoadNhanVien()
+        {
+            dgvNV.DataSource = nvBUS.GetAll();
+        }
+
+        void ChonNV(object sender, DataGridViewCellEventArgs e)
+        {
+            if (e.RowIndex < 0) return;
+
+            DataGridViewRow r = dgvNV.Rows[e.RowIndex];
+
+            txtMa.Text = r.Cells["MaNV"].Value.ToString();
+            txtTen.Text = r.Cells["HoTen"].Value.ToString();
+            txtCCCD.Text = r.Cells["CCCD"].Value.ToString();
+            txtMaPB.Text = r.Cells["MaPB"].Value.ToString();
+            txtLuong.Text = r.Cells["LuongCoBan"].Value.ToString();
+            txtHeSo.Text = r.Cells["HeSoLuong"].Value.ToString();
+        }
+
+        NhanVienDTO LayNV()
+        {
+            return new NhanVienDTO
+            {
+                HoTen = txtTen.Text.Trim(),
+                NgaySinh = DateTime.Today,
+                CCCD = txtCCCD.Text.Trim(),
+                MaPB = int.Parse(txtMaPB.Text),
+                LuongCoBan = decimal.Parse(txtLuong.Text),
+                HeSoLuong = double.Parse(txtHeSo.Text)
+            };
+        }
+
+        void ThemNV()
+        {
+            try
+            {
+                nvBUS.Insert(LayNV());
+                LoadNhanVien();
+                MessageBox.Show("Thêm nhân viên thành công!");
+            }
+            catch (Exception ex) { MessageBox.Show(ex.Message); }
+        }
+
+        void SuaNV()
+        {
+            try
+            {
+                NhanVienDTO nv = LayNV();
+                nv.MaNV = int.Parse(txtMa.Text);
+                nvBUS.Update(nv);
+                LoadNhanVien();
+                MessageBox.Show("Sửa nhân viên thành công!");
+            }
+            catch (Exception ex) { MessageBox.Show(ex.Message); }
+        }
+
+        void XoaNV()
+        {
+            try
+            {
+                nvBUS.Delete(int.Parse(txtMa.Text));
+                LoadNhanVien();
+                MessageBox.Show("Xóa nhân viên thành công!");
+            }
+            catch (Exception ex) { MessageBox.Show(ex.Message); }
+        }
+
+        void TimNV()
+        {
+            dgvNV.DataSource = nvBUS.Search(txtTim.Text.Trim());
+        }
+
+        void TaiChamCong()
+        {
+            try
+            {
+                DataTable dt = ccBUS.Load(txtThang.Text.Trim());
+                dgvCC.DataSource = dt;
+
+                // Không cho sửa dữ liệu đã chốt
+                foreach (DataGridViewRow r in dgvCC.Rows)
+                {
+                    bool daChot = Convert.ToBoolean(r.Cells["DaChotLuong"].Value);
+                    r.ReadOnly = daChot;
+                }
+
+                dgvCC.Columns["MaCong"].Visible = false;
+                dgvCC.Columns["DaChotLuong"].ReadOnly = true;
+                dgvCC.Columns["MaNV"].ReadOnly = true;
+                dgvCC.Columns["HoTen"].ReadOnly = true;
+                dgvCC.Columns["ThangNam"].Visible = false;
+            }
+            catch (Exception ex) { MessageBox.Show(ex.Message); }
+        }
+
+        void LuuChamCong()
+        {
+            try
+            {
+                dgvCC.EndEdit();
+
+                DataTable dt = dgvCC.DataSource as DataTable;
+
+                if (dt == null)
+                    throw new Exception("Hãy tải bảng chấm công trước!");
+
+                ccBUS.Luu(dt, txtThang.Text.Trim());
+
+                MessageBox.Show("Lưu chấm công thành công!");
+                TaiChamCong();
+            }
+            catch (Exception ex) { MessageBox.Show(ex.Message); }
+        }
+
+        void ChotLuong()
+        {
+            try
+            {
+                if (MessageBox.Show("Bạn có chắc chắn muốn chốt lương tháng này?",
+                    "Xác nhận", MessageBoxButtons.YesNo) != DialogResult.Yes)
+                    return;
+
+                luongBUS.ChotLuong(txtThang.Text.Trim());
+
+                MessageBox.Show("Chốt lương thành công!");
+                TaiChamCong();
+            }
+            catch (Exception ex) { MessageBox.Show(ex.Message); }
+        }
+    }
+}
