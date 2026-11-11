@@ -1,0 +1,79 @@
+using System.Data;
+using System.Data.SqlClient;
+using RetailSales.DTO;
+
+namespace RetailSales.DAL
+{
+    public class SanPhamDAL
+    {
+        public DataTable GetAll()
+        {
+            using (SqlConnection c = DB.GetConnection())
+            {
+                SqlDataAdapter da = new SqlDataAdapter(
+                    "SELECT * FROM SanPham", c);
+                DataTable dt = new DataTable();
+                da.Fill(dt);
+                return dt;
+            }
+        }
+
+        public DataTable Search(string tuKhoa)
+        {
+            using (SqlConnection c = DB.GetConnection())
+            {
+                SqlDataAdapter da = new SqlDataAdapter(
+                    "SELECT * FROM SanPham WHERE MaSP LIKE @q OR TenSP LIKE @q", c);
+                da.SelectCommand.Parameters.AddWithValue("@q", "%" + tuKhoa + "%");
+
+                DataTable dt = new DataTable();
+                da.Fill(dt);
+                return dt;
+            }
+        }
+
+        public void Insert(SanPhamDTO sp)
+        {
+            using (SqlConnection c = DB.GetConnection())
+            using (SqlCommand cmd = new SqlCommand(
+                @"INSERT INTO SanPham(MaSP,TenSP,GiaBan,SoLuongTon)
+                  VALUES(@ma,@ten,@gia,@sl)", c))
+            {
+                cmd.Parameters.Add("@ma", SqlDbType.VarChar, 20).Value = sp.MaSP;
+                cmd.Parameters.Add("@ten", SqlDbType.NVarChar, 150).Value = sp.TenSP;
+                cmd.Parameters.Add("@gia", SqlDbType.Decimal).Value = sp.GiaBan;
+                cmd.Parameters.Add("@sl", SqlDbType.Int).Value = sp.SoLuongTon;
+                c.Open();
+                cmd.ExecuteNonQuery();
+            }
+        }
+
+        public void Update(SanPhamDTO sp)
+        {
+            using (SqlConnection c = DB.GetConnection())
+            using (SqlCommand cmd = new SqlCommand(
+                @"UPDATE SanPham SET TenSP=@ten,GiaBan=@gia,
+                  SoLuongTon=@sl WHERE MaSP=@ma", c))
+            {
+                cmd.Parameters.Add("@ma", SqlDbType.VarChar, 20).Value = sp.MaSP;
+                cmd.Parameters.Add("@ten", SqlDbType.NVarChar, 150).Value = sp.TenSP;
+                cmd.Parameters.Add("@gia", SqlDbType.Decimal).Value = sp.GiaBan;
+                cmd.Parameters.Add("@sl", SqlDbType.Int).Value = sp.SoLuongTon;
+                c.Open();
+                cmd.ExecuteNonQuery();
+            }
+        }
+
+        public void Delete(string ma)
+        {
+            using (SqlConnection c = DB.GetConnection())
+            using (SqlCommand cmd = new SqlCommand(
+                "DELETE FROM SanPham WHERE MaSP=@ma", c))
+            {
+                cmd.Parameters.Add("@ma", SqlDbType.VarChar, 20).Value = ma;
+                c.Open();
+                cmd.ExecuteNonQuery();
+            }
+        }
+    }
+}
