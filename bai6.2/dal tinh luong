@@ -1,0 +1,71 @@
+using System;
+using System.Data.SqlClient;
+
+namespace HRM.DAL
+{
+    public class TinhLuongDAL
+    {
+        public void ChotLuong(string thangNam)
+        {
+            using (SqlConnection c = DB.GetConnection())
+            {
+                c.Open();
+                SqlTransaction trans = c.BeginTransaction();
+
+                try
+                {
+                    // Kiểm tra tháng đã chốt chưa
+                    SqlCommand check = new SqlCommand(
+                        @"SELECT COUNT(*) FROM BangChamCong
+                          WHERE ThangNam=@thang AND DaChotLuong=1",
+                        c, trans);
+
+                    check.Parameters.AddWithValue("@thang", thangNam);
+
+                    if (Convert.ToInt32(check.ExecuteScalar()) > 0)
+                        throw new Exception("Tháng này đã được chốt lương!");
+
+                    // Kiểm tra có dữ liệu chấm công
+                    SqlCommand dem = new SqlCommand(
+                        "SELECT COUNT(*) FROM BangChamCong WHERE ThangNam=@thang",
+                        c, trans);
+
+                    dem.Parameters.AddWithValue("@thang", thangNam);
+
+                    if (Convert.ToInt32(dem.ExecuteScalar()) == 0)
+                        throw new Exception("Chưa có dữ liệu chấm công!");
+
+                    // Tạo bảng lương cho toàn bộ nhân viên có chấm công
+                    SqlCommand cmd = new SqlCommand(@"
+                        INSERT INTO BangLuong(MaNV,ThangNam,ThucLinh)
+                        SELECT nv.MaNV, cc.ThangNam,
+                        (nv.LuongCoBan * nv.HeSoLuong / 22)
+                        * cc.SoNgayCong + (cc.SoGioOT * 50000)
+                        FROM BangChamCong cc
+                        JOIN NhanVien nv ON cc.MaNV=nv.MaNV
+                        WHERE cc.ThangNam=@thang
+                        AND cc.DaChotLuong=0", c, trans);
+
+                    cmd.Parameters.AddWithValue("@thang", thangNam);
+                    cmd.ExecuteNonQuery();
+
+                    // Khóa dữ liệu chấm công
+                    SqlCommand khoa = new SqlCommand(@"
+                        UPDATE BangChamCong
+                        SET DaChotLuong=1
+                        WHERE ThangNam=@thang", c, trans);
+
+                    khoa.Parameters.AddWithValue("@thang", thangNam);
+                    khoa.ExecuteNonQuery();
+
+                    trans.Commit();
+                }
+                catch
+                {
+                    trans.Rollback();
+                    throw;
+                }
+            }
+        }
+    }
+}
