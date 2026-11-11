@@ -1,0 +1,43 @@
+using System;
+using System.Data;
+using HRM.DAL;
+using HRM.DTO;
+
+namespace HRM.BUS
+{
+    public class NhanVienBUS
+    {
+        NhanVienDAL dal = new NhanVienDAL();
+
+        public DataTable GetAll()
+        {
+            return dal.GetAll();
+        }
+
+        public DataTable Search(string q)
+        {
+            return dal.Search(q);
+        }
+
+        public void Insert(NhanVienDTO nv)
+        {
+            if (string.IsNullOrWhiteSpace(nv.HoTen))
+                throw new Exception("Họ tên không được để trống!");
+
+            if (nv.LuongCoBan <= 0 || nv.HeSoLuong <= 0)
+                throw new Exception("Lương và hệ số phải lớn hơn 0!");
+
+            dal.Insert(nv);
+        }
+
+        public void Update(NhanVienDTO nv)
+        {
+            dal.Update(nv);
+        }
+
+        public void Delete(int ma)
+        {
+            dal.Delete(ma);
+        }
+    }
+}
