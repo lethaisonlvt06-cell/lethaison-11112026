@@ -1,0 +1,96 @@
+using System;
+using System.Data;
+using System.Data.SqlClient;
+
+namespace RetailSales.DAL
+{
+    public class ThanhToanDAL
+    {
+        public int ThanhToan(int maNV, int? maKH, DataTable gioHang)
+        {
+            using (SqlConnection c = DB.GetConnection())
+            {
+                c.Open();
+
+                SqlTransaction trans = c.BeginTransaction();
+
+                try
+                {
+                    decimal tongTien = 0;
+
+                    foreach (DataRow r in gioHang.Rows)
+                        tongTien += Convert.ToDecimal(r["DonGia"])
+                                  * Convert.ToInt32(r["SoLuong"]);
+
+                    // 1. Tạo hóa đơn
+                    SqlCommand cmdHD = new SqlCommand(
+                        @"INSERT INTO HoaDon(MaNV,MaKH,TongTien)
+                          VALUES(@nv,@kh,@tong);
+                          SELECT SCOPE_IDENTITY();", c, trans);
+
+                    cmdHD.Parameters.Add("@nv", SqlDbType.Int).Value = maNV;
+                    cmdHD.Parameters.Add("@kh", SqlDbType.Int).Value =
+                        maKH.HasValue ? (object)maKH.Value : DBNull.Value;
+                    cmdHD.Parameters.Add("@tong", SqlDbType.Decimal).Value = tongTien;
+
+                    int maHD = Convert.ToInt32(cmdHD.ExecuteScalar());
+
+                    // 2. Thêm chi tiết và trừ kho
+                    foreach (DataRow r in gioHang.Rows)
+                    {
+                        string maSP = r["MaSP"].ToString();
+                        int soLuong = Convert.ToInt32(r["SoLuong"]);
+                        decimal donGia = Convert.ToDecimal(r["DonGia"]);
+
+                        SqlCommand cmdKho = new SqlCommand(
+                            @"UPDATE SanPham
+                              SET SoLuongTon = SoLuongTon - @sl
+                              WHERE MaSP = @ma AND SoLuongTon >= @sl", c, trans);
+
+                        cmdKho.Parameters.Add("@sl", SqlDbType.Int).Value = soLuong;
+                        cmdKho.Parameters.Add("@ma", SqlDbType.VarChar, 20).Value = maSP;
+
+                        if (cmdKho.ExecuteNonQuery() == 0)
+                            throw new Exception("Sản phẩm " + maSP +
+                                " không đủ số lượng tồn kho!");
+
+                        SqlCommand cmdCT = new SqlCommand(
+                            @"INSERT INTO ChiTietHoaDon(MaHD,MaSP,SoLuong,DonGia)
+                              VALUES(@hd,@sp,@sl,@gia)", c, trans);
+
+                        cmdCT.Parameters.Add("@hd", SqlDbType.Int).Value = maHD;
+                        cmdCT.Parameters.Add("@sp", SqlDbType.VarChar, 20).Value = maSP;
+                        cmdCT.Parameters.Add("@sl", SqlDbType.Int).Value = soLuong;
+                        cmdCT.Parameters.Add("@gia", SqlDbType.Decimal).Value = donGia;
+
+                        cmdCT.ExecuteNonQuery();
+                    }
+
+                    // 3. Cộng điểm tích lũy
+                    if (maKH.HasValue)
+                    {
+                        SqlCommand cmdDiem = new SqlCommand(
+                            @"UPDATE KhachHang
+                              SET DiemTichLuy = DiemTichLuy + @diem
+                              WHERE MaKH = @kh", c, trans);
+
+                        cmdDiem.Parameters.Add("@diem", SqlDbType.Int).Value =
+                            (int)(tongTien / 100000);
+
+                        cmdDiem.Parameters.Add("@kh", SqlDbType.Int).Value = maKH.Value;
+
+                        cmdDiem.ExecuteNonQuery();
+                    }
+
+                    trans.Commit();
+                    return maHD;
+                }
+                catch
+                {
+                    trans.Rollback();
+                    throw;
+                }
+            }
+        }
+    }
+}
