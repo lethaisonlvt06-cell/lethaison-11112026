@@ -1,0 +1,29 @@
+using System.Data;
+using System.Data.SqlClient;
+
+namespace HRM.DAL
+{
+    public class BangLuongDAL
+    {
+        public DataTable GetBangLuong(string thangNam)
+        {
+            using (SqlConnection c = DB.GetConnection())
+            {
+                SqlDataAdapter da = new SqlDataAdapter(@"
+                    SELECT bl.MaLuong,nv.MaNV,nv.HoTen,
+                    bl.ThangNam,bl.ThucLinh
+                    FROM BangLuong bl
+                    JOIN NhanVien nv ON bl.MaNV=nv.MaNV
+                    WHERE bl.ThangNam=@thang
+                    ORDER BY nv.MaNV", c);
+
+                da.SelectCommand.Parameters.Add("@thang", SqlDbType.VarChar, 7)
+                    .Value = thangNam;
+
+                DataTable dt = new DataTable();
+                da.Fill(dt);
+                return dt;
+            }
+        }
+    }
+}
