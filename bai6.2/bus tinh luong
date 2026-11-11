@@ -1,0 +1,14 @@
+using HRM.DAL;
+
+namespace HRM.BUS
+{
+    public class TinhLuongBUS
+    {
+        TinhLuongDAL dal = new TinhLuongDAL();
+
+        public void ChotLuong(string thangNam)
+        {
+            dal.ChotLuong(thangNam);
+        }
+    }
+}
