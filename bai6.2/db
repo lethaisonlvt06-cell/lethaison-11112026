@@ -1,0 +1,15 @@
+using System.Data.SqlClient;
+
+namespace HRM
+{
+    public class DB
+    {
+        public static string ChuoiKetNoi =
+            @"Data Source=.\SQLEXPRESS;Initial Catalog=HRMDB;Integrated Security=True;TrustServerCertificate=True";
+
+        public static SqlConnection GetConnection()
+        {
+            return new SqlConnection(ChuoiKetNoi);
+        }
+    }
+}
